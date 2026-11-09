@@ -19,11 +19,38 @@ const VAGUE_SETTLEMENT_TERMS = [
   "user-friendly",
   "high quality",
   "robust",
-  // Added 2026-09-26 as SUBSTRING matches: "insecure", "securely", "accurately" and "inaccurate"
-  // are the same unverifiable claim in a different tense.
+  // Added 2026-09-26. Their inflections ("insecure", "securely", "accurately", "inaccurate") are
+  // the same unverifiable claim in a different tense and are listed in TERM_FORMS below.
   "secure",
   "accurate",
 ];
+
+/**
+ * Every spelling that counts as a given listed term. A term not listed here matches only itself.
+ * The reported term is always the canonical entry of VAGUE_SETTLEMENT_TERMS, never the inflection.
+ */
+const TERM_FORMS = {
+  secure: ["secure", "securely", "insecure", "insecurely"],
+  accurate: ["accurate", "accurately", "inaccurate", "inaccurately"],
+};
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * A term matches only as a whole word or whole phrase: a letter or digit directly before or after
+ * it breaks the match, so "cleanup", "goods", "Content-Security-Policy" and "professionals.csv"
+ * are not flagged, while "(robust)", "Better!" and "MAKE IT USER-FRIENDLY" still are.
+ */
+const TERM_PATTERNS = VAGUE_SETTLEMENT_TERMS.map((term) => {
+  const forms = TERM_FORMS[term] || [term];
+  const alternatives = forms.map(escapeRegExp).join("|");
+  return {
+    term,
+    pattern: new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{N}])`, "iu"),
+  };
+});
 
 /**
  * A crude but effective "does this text also carry a machine-checkable, objective definition"
@@ -34,8 +61,7 @@ const OBJECTIVE_DEFINITION_RE =
   /(<=|>=|==|!=|<|>|≤|≥)\s*-?\d|\b-?\d+(\.\d+)?\s*(ms|milliseconds?|s|sec|secs|seconds?|%|percent|mb|gb|kb|bytes?|rps|qps|req\/s|requests?|ops)\b|sha256:[0-9a-f]{64}|\bexit code\s+-?\d+\b|\bstatus code\s+-?\d+\b/i;
 
 function findVagueSettlementTerms(text) {
-  const lower = text.toLowerCase();
-  return VAGUE_SETTLEMENT_TERMS.filter((term) => lower.includes(term));
+  return TERM_PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ term }) => term);
 }
 
 function hasObjectiveDefinition(text) {
