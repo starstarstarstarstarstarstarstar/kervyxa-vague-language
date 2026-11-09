@@ -1,0 +1,11 @@
+{
+  "name": "kervyxa-vague-language",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kervyxa's vague-settlement-language detector, extracted so the next fix can be bought as an Outcome Contract on kervyxa.com",
+  "main": "vague-language.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "license": "MIT"
+}
